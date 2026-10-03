@@ -1,0 +1,814 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OrderFlow — Distributed Commerce Platform</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <!-- Global Top Navigation -->
+  <nav class="navbar">
+    <div class="nav-container">
+      <div class="brand" onclick="navigate('/')">
+        <div class="logo-badge">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="m7.5 4.27 9 5.15"/>
+            <path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/>
+            <path d="m3.3 7 8.7 5 8.7-5"/>
+            <path d="M12 22V12"/>
+          </svg>
+        </div>
+        <div class="brand-text">
+          <span class="brand-title">OrderFlow</span>
+          <span class="brand-sub">Enterprise Distributed Commerce</span>
+        </div>
+      </div>
+
+      <!-- Center Nav Links -->
+      <div class="nav-links">
+        <a href="#/" class="nav-link" id="navCatalog">Catalog</a>
+        <a href="#/profile/orders" class="nav-link" id="navOrders">Orders</a>
+        <a href="#/seller/products" class="nav-link" id="navSeller" style="display:none;">Seller Hub</a>
+        <a href="#/admin/telemetry" class="nav-link" id="navTelemetry" style="display:none;">Telemetry</a>
+        <a href="/swagger-ui/index.html" target="_blank" class="nav-link nav-external">
+          <span>Docs</span>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+            <polyline points="15 3 21 3 21 9"></polyline>
+            <line x1="10" y1="14" x2="21" y2="3"></line>
+          </svg>
+        </a>
+      </div>
+
+      <!-- Right Utility Bar -->
+      <div class="nav-actions">
+        <!-- Notification Center -->
+        <div class="notif-wrapper" id="notifWrapper" style="display:none;">
+          <button class="icon-btn" id="btnNotif" onclick="toggleNotifications()" title="Order Notifications">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/>
+              <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>
+            </svg>
+            <span class="notif-badge" id="notifBadge" style="display:none;">0</span>
+          </button>
+          <div class="notif-dropdown" id="notifDropdown" style="display:none;">
+            <div class="notif-header">
+              <span>Notifications</span>
+              <button class="text-btn" onclick="markAllNotificationsRead()">Mark all read</button>
+            </div>
+            <div class="notif-list" id="notifList">
+              <div class="empty-notif">No notifications yet</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Cart Icon Button -->
+        <button class="cart-btn" id="btnCart" onclick="navigate('/cart')" title="Shopping Cart">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="8" cy="21" r="1"/>
+            <circle cx="19" cy="21" r="1"/>
+            <path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/>
+          </svg>
+          <span class="cart-label">Cart</span>
+          <span class="cart-badge" id="cartBadge">0</span>
+        </button>
+
+        <!-- Auth Status & Profile Menu -->
+        <div class="auth-box" id="authBox">
+          <div class="user-chip" id="userChip" onclick="navigate('/profile')" style="display:none;">
+            <div class="avatar" id="userAvatar">U</div>
+            <div class="user-meta">
+              <span class="user-name" id="userName">User</span>
+              <span class="role-tag" id="userRole">Customer</span>
+            </div>
+          </div>
+          <button class="btn-secondary" id="btnLoginNav" onclick="navigate('/auth/login')">Sign In</button>
+          <button class="btn-primary" id="btnRegisterNav" onclick="navigate('/auth/register')">Register</button>
+          <button class="btn-ghost" id="btnLogoutNav" onclick="logout()" style="display:none;" title="Sign Out">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+              <polyline points="16 17 21 12 16 7"></polyline>
+              <line x1="21" y1="12" x2="9" y2="12"></line>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Notification Toast Container -->
+  <div id="toastContainer" class="toast-container"></div>
+
+  <!-- Page View Containers (Only one active at a time) -->
+  <main class="content-container">
+
+    <!-- VIEW 1: CATALOG -->
+    <section id="view-catalog" class="page-view active">
+      <div class="catalog-hero">
+        <div class="hero-content">
+          <h2>High-Performance Hardware & Flagship Gear</h2>
+          <p>Instant availability verified across PostgreSQL row-level locks and distributed Redis cache.</p>
+        </div>
+        <div class="search-bar">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+          <input type="text" id="catalogSearchInput" placeholder="Search products, switch variants, or categories..." oninput="filterProducts()">
+        </div>
+      </div>
+
+      <div class="catalog-toolbar">
+        <div class="category-pills" id="categoryPills">
+          <button class="pill active" onclick="selectCategory('ALL')">All Categories</button>
+          <button class="pill" onclick="selectCategory('Cosmetics')">Cosmetics</button>
+          <button class="pill" onclick="selectCategory('Namkeens')">Namkeens</button>
+          <button class="pill" onclick="selectCategory('Clothes')">Clothes</button>
+          <button class="pill" onclick="selectCategory('Jewellery')">Jewellery</button>
+          <button class="pill" onclick="selectCategory('Peripherals')">Peripherals</button>
+          <button class="pill" onclick="selectCategory('Audio')">Audio</button>
+          <button class="pill" onclick="selectCategory('Displays')">Displays</button>
+          <button class="pill" onclick="selectCategory('Furniture')">Furniture</button>
+        </div>
+        <button class="btn-secondary" onclick="loadProducts()" title="Refresh Product Catalog">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M3 12a9 9 0 0 1 15-6.7L21 8"></path>
+            <path d="M21 3v5h-5"></path>
+            <path d="M21 12a9 9 0 0 1-15 6.7L3 16"></path>
+            <path d="M3 21v-5h5"></path>
+          </svg>
+          <span>Refresh</span>
+        </button>
+      </div>
+
+      <div class="products-grid" id="productsContainer">
+        <!-- Injected via app.js -->
+      </div>
+    </section>
+
+    <!-- VIEW 2: PRODUCT DETAIL -->
+    <section id="view-product-detail" class="page-view">
+      <div class="breadcrumb">
+        <a href="#/">Catalog</a>
+        <span>/</span>
+        <span id="detailBreadcrumbName">Product</span>
+      </div>
+
+      <div class="product-detail-layout">
+        <!-- Left: Product Image -->
+        <div class="detail-gallery">
+          <div class="main-image-card">
+            <img id="detailImage" src="" alt="Product Image">
+          </div>
+        </div>
+
+        <!-- Right: Purchase Panel & Variants -->
+        <div class="detail-info">
+          <div class="detail-badges">
+            <span class="badge category-badge" id="detailCategory">Category</span>
+            <span class="badge seller-badge" id="detailSeller">Sold by Apex Labs</span>
+          </div>
+          <h1 id="detailTitle" class="detail-title">Flagship Mechanical Keyboard</h1>
+          <p id="detailDescription" class="detail-desc">Modular keyboard with hot-swappable switches and PBT keycaps.</p>
+
+          <!-- Ratings preview -->
+          <div class="detail-rating-row" onclick="scrollToReviews()">
+            <div class="stars" id="detailStars">★★★★★</div>
+            <span class="rating-text" id="detailRatingText">4.8 (0 reviews)</span>
+          </div>
+
+          <!-- Price & Stock -->
+          <div class="detail-price-box">
+            <div class="detail-price" id="detailPrice">₹0.00</div>
+            <div class="stock-indicator in-stock" id="detailStock">In Stock (0 units)</div>
+          </div>
+
+          <!-- Variants Selector -->
+          <div class="variant-section" id="detailVariantSection" style="display:none;">
+            <label class="section-label">Select Variant / Switch Type:</label>
+            <div class="variant-chips" id="detailVariantChips">
+              <!-- Variant buttons injected here -->
+            </div>
+          </div>
+
+          <!-- Quantity Selector -->
+          <div class="quantity-section">
+            <label class="section-label">Quantity:</label>
+            <div class="stepper">
+              <button class="step-btn" onclick="adjustDetailQuantity(-1)">-</button>
+              <input type="number" id="detailQuantity" value="1" min="1" max="99" readonly>
+              <button class="step-btn" onclick="adjustDetailQuantity(1)">+</button>
+            </div>
+          </div>
+
+          <!-- Action Buttons -->
+          <div class="detail-actions">
+            <button class="btn-primary-large" id="btnAddToCartDetail" onclick="addDetailToCart()">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="8" cy="21" r="1"/>
+                <circle cx="19" cy="21" r="1"/>
+                <path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/>
+              </svg>
+              <span>Add to Cart</span>
+            </button>
+            <button class="btn-accent-large" id="btnBuyNowDetail" onclick="buyNowFromDetail()">
+              <span>Buy Now</span>
+            </button>
+          </div>
+
+          <!-- Guarantee Badges -->
+          <div class="guarantee-grid">
+            <div class="guarantee-item">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+              </svg>
+              <span>Pessimistic Row Lock Protection</span>
+            </div>
+            <div class="guarantee-item">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect width="20" height="14" x="2" y="5" rx="2"/>
+                <line x1="2" x2="22" y1="10" y2="10"/>
+              </svg>
+              <span>Razorpay & Sagas Automated Refund</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Customer Reviews Section -->
+      <div class="reviews-section" id="reviewsContainer">
+        <div class="reviews-header">
+          <div class="header-left">
+            <h3>Customer Reviews & Ratings</h3>
+            <div class="review-stats">
+              <span class="big-score" id="reviewAvgScore">0.0</span>
+              <div class="stars-col">
+                <div class="stars" id="reviewAvgStars">☆☆☆☆☆</div>
+                <span id="reviewCountLabel">Based on 0 reviews</span>
+              </div>
+            </div>
+          </div>
+          <button class="btn-secondary" id="btnOpenReviewForm" onclick="toggleReviewForm()">
+            Write a Review
+          </button>
+        </div>
+
+        <!-- Add Review Form (collapsible) -->
+        <div class="add-review-card" id="addReviewCard" style="display:none;">
+          <h4>Share Your Experience</h4>
+          <p class="form-hint">Verified purchasers receive an authentic purchase badge on their review.</p>
+          <form id="reviewForm" onsubmit="handleReviewSubmit(event)">
+            <div class="form-group">
+              <label>Your Rating:</label>
+              <div class="star-rating-input">
+                <span class="star-pick" data-val="1" onclick="setFormRating(1)">★</span>
+                <span class="star-pick" data-val="2" onclick="setFormRating(2)">★</span>
+                <span class="star-pick" data-val="3" onclick="setFormRating(3)">★</span>
+                <span class="star-pick" data-val="4" onclick="setFormRating(4)">★</span>
+                <span class="star-pick" data-val="5" onclick="setFormRating(5)">★</span>
+                <input type="hidden" id="formRatingVal" value="5">
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Your Review:</label>
+              <textarea id="reviewComment" rows="3" placeholder="Describe the build quality, tactile feel, performance..." required></textarea>
+            </div>
+            <div style="display:flex;gap:0.75rem;">
+              <button type="submit" class="btn-primary">Submit Review</button>
+              <button type="button" class="btn-secondary" onclick="toggleReviewForm()">Cancel</button>
+            </div>
+          </form>
+        </div>
+
+        <!-- Reviews Feed -->
+        <div class="reviews-list" id="reviewsList">
+          <!-- Injected via app.js -->
+        </div>
+      </div>
+    </section>
+
+    <!-- VIEW 3: FULL CART PAGE -->
+    <section id="view-cart" class="page-view">
+      <div class="page-header">
+        <h2>Shopping Cart</h2>
+        <p>Review items, adjust quantities, and select your snapshotted delivery address.</p>
+      </div>
+
+      <div class="cart-layout" id="cartLayout">
+        <!-- Left: Cart Items -->
+        <div class="cart-main">
+          <div class="cart-items-table" id="cartItemsList">
+            <!-- Injected via app.js -->
+          </div>
+        </div>
+
+        <!-- Right: Summary & Address -->
+        <div class="cart-sidebar">
+          <div class="sidebar-card">
+            <h3>Delivery Destination</h3>
+            <p class="sidebar-desc">Select which saved shipping address to snapshot onto this order:</p>
+            <div id="cartAddressSelector" class="address-picker">
+              <!-- Injected via app.js -->
+            </div>
+            <button class="btn-link" onclick="navigate('/profile')">+ Manage Addresses</button>
+          </div>
+
+          <div class="sidebar-card summary-card">
+            <h3>Order Summary</h3>
+            <div class="summary-line">
+              <span>Subtotal</span>
+              <span id="cartSubtotal">₹0.00</span>
+            </div>
+            <div class="summary-line">
+              <span>Estimated Tax</span>
+              <span>₹0.00</span>
+            </div>
+            <div class="summary-line">
+              <span>Shipping</span>
+              <span class="free-badge">FREE</span>
+            </div>
+            <div class="summary-divider"></div>
+            <div class="summary-line total-line">
+              <span>Total</span>
+              <span id="cartTotal">₹0.00</span>
+            </div>
+
+            <button class="btn-primary-large btn-checkout" id="btnProceedCheckout" onclick="proceedToCheckout()">
+              <span>Proceed to Checkout</span>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="9 18 15 12 9 6"></polyline>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Empty Cart State -->
+      <div class="empty-state" id="emptyCartState" style="display:none;">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <circle cx="8" cy="21" r="1"/>
+          <circle cx="19" cy="21" r="1"/>
+          <path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/>
+        </svg>
+        <h3>Your Cart is Empty</h3>
+        <p>Explore our catalog of premium components and add items to your cart.</p>
+        <button class="btn-primary" onclick="navigate('/')">Browse Products</button>
+      </div>
+    </section>
+
+    <!-- VIEW 4: DEDICATED CHECKOUT & PAYMENT PAGE -->
+    <section id="view-checkout-pay" class="page-view">
+      <div class="page-header">
+        <h2>Checkout & Payment</h2>
+        <p>Complete your payment to trigger automated Kafka confirmation sagas.</p>
+      </div>
+
+      <div class="checkout-layout">
+        <!-- Left: Payment Form & Gateway Selection -->
+        <div class="checkout-main">
+          <div class="payment-box">
+            <h3>Select Payment Method</h3>
+
+            <div class="payment-methods-tabs">
+              <button class="pm-tab active" data-method="CREDIT_CARD" onclick="selectPaymentMethod('CREDIT_CARD')">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect width="20" height="14" x="2" y="5" rx="2"/>
+                  <line x1="2" x2="22" y1="10" y2="10"/>
+                </svg>
+                <span>Credit / Debit Card</span>
+              </button>
+              <button class="pm-tab" data-method="UPI" onclick="selectPaymentMethod('UPI')">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+                </svg>
+                <span>UPI (GPay / PhonePe)</span>
+              </button>
+              <button class="pm-tab" data-method="NET_BANKING" onclick="selectPaymentMethod('NET_BANKING')">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                  <polyline points="9 22 9 12 15 12 15 22"/>
+                </svg>
+                <span>Net Banking</span>
+              </button>
+              <button class="pm-tab" data-method="CASH_ON_DELIVERY" onclick="selectPaymentMethod('CASH_ON_DELIVERY')">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/>
+                  <path d="M15 18H9"/>
+                  <path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"/>
+                  <circle cx="17" cy="18" r="2"/>
+                  <circle cx="7" cy="18" r="2"/>
+                </svg>
+                <span>Cash on Delivery (COD)</span>
+              </button>
+            </div>
+
+            <!-- Gateway Mode Selector (Simulation vs Razorpay) -->
+            <div class="gateway-mode-box">
+              <label class="toggle-control">
+                <input type="checkbox" id="chkUseRazorpay" onchange="toggleGatewayMode()">
+                <span class="toggle-slider"></span>
+                <span class="toggle-label">Enable Direct Razorpay Gateway Adapter (with Cryptographic HMAC Verification)</span>
+              </label>
+            </div>
+
+            <!-- Dynamic Method Form Panel -->
+            <div class="pm-form-panel" id="pmFormPanel">
+              <!-- Form rendered dynamically via app.js -->
+            </div>
+
+            <!-- Failure Simulator toggle -->
+            <div class="sim-fail-box" id="simFailBox">
+              <label class="checkbox-control">
+                <input type="checkbox" id="chkSimulateFail">
+                <span>Simulate Gateway Failure (Test Kafka Compensating Saga Cancellation)</span>
+              </label>
+            </div>
+
+            <div class="checkout-actions">
+              <button class="btn-primary-large" id="btnSubmitPayment" onclick="executePayment()">
+                <span>Pay Now</span>
+                <span id="payAmountLabel">₹0.00</span>
+              </button>
+              <button class="btn-secondary" onclick="navigate('/profile/orders')">Cancel & Return to Orders</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: Order Snapshot Sidebar -->
+        <div class="checkout-sidebar">
+          <div class="sidebar-card">
+            <h3>Order Details</h3>
+            <div class="order-ref-badge" id="payOrderRef">Order #ORD-...</div>
+            <div class="summary-line">
+              <span>Status</span>
+              <span class="status-tag status-awaiting" id="payOrderStatus">Awaiting Payment</span>
+            </div>
+            <div class="summary-line">
+              <span>Date</span>
+              <span id="payOrderDate">Today</span>
+            </div>
+            <div class="summary-divider"></div>
+            <div class="summary-line total-line">
+              <span>Amount Due</span>
+              <span id="payOrderTotal">₹0.00</span>
+            </div>
+          </div>
+
+          <div class="sidebar-card">
+            <h3>Shipping Destination</h3>
+            <div class="address-card-compact" id="payShippingAddress">
+              <!-- Injected via app.js -->
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- VIEW 5: USER PROFILE & ADDRESS BOOK -->
+    <section id="view-profile" class="page-view">
+      <div class="page-header">
+        <h2>Customer Profile & Addresses</h2>
+        <p>Manage your account identity and saved shipping addresses.</p>
+      </div>
+
+      <div class="profile-layout">
+        <!-- Account Information -->
+        <div class="profile-card">
+          <div class="user-big-avatar" id="profAvatar">U</div>
+          <h3 id="profFullName">Customer Name</h3>
+          <p id="profEmail">customer@orderflow.io</p>
+          <div class="badge role-badge" id="profRole">ROLE_CUSTOMER</div>
+        </div>
+
+        <!-- Saved Addresses -->
+        <div class="address-book-card">
+          <div class="card-header">
+            <h3>Saved Delivery Addresses</h3>
+            <button class="btn-primary" onclick="toggleAddAddressForm()">+ Add New Address</button>
+          </div>
+
+          <!-- New Address Form (collapsible) -->
+          <div class="add-address-box" id="addAddressBox" style="display:none;">
+            <h4>Add New Destination</h4>
+            <form id="addressForm" onsubmit="handleAddressSubmit(event)">
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Recipient Name</label>
+                  <input type="text" id="addrRecipient" required>
+                </div>
+                <div class="form-group">
+                  <label>Phone Number</label>
+                  <input type="text" id="addrPhone" required>
+                </div>
+              </div>
+              <div class="form-group">
+                <label>Street Address</label>
+                <input type="text" id="addrStreet" required>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label>City</label>
+                  <input type="text" id="addrCity" required>
+                </div>
+                <div class="form-group">
+                  <label>State</label>
+                  <input type="text" id="addrState" required>
+                </div>
+                <div class="form-group">
+                  <label>Postal Code</label>
+                  <input type="text" id="addrPostal" required>
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Country</label>
+                  <input type="text" id="addrCountry" value="USA" required>
+                </div>
+                <div class="form-group checkbox-align">
+                  <label class="checkbox-control">
+                    <input type="checkbox" id="addrIsDefault">
+                    <span>Set as Default Address</span>
+                  </label>
+                </div>
+              </div>
+              <div style="display:flex;gap:0.5rem;margin-top:0.75rem;">
+                <button type="submit" class="btn-primary">Save Address</button>
+                <button type="button" class="btn-secondary" onclick="toggleAddAddressForm()">Cancel</button>
+              </div>
+            </form>
+          </div>
+
+          <!-- Addresses List -->
+          <div class="addresses-grid" id="addressesContainer">
+            <!-- Injected via app.js -->
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- VIEW 6: ORDER HISTORY & TRACKING -->
+    <section id="view-orders" class="page-view">
+      <div class="page-header">
+        <h2>My Orders & Live Tracking</h2>
+        <p>Monitor your active order progressions and view historical fulfillment logs.</p>
+      </div>
+
+      <div class="orders-toolbar">
+        <div class="filter-tabs">
+          <button class="tab-btn active" onclick="filterOrdersByStatus('ALL')">All Orders</button>
+          <button class="tab-btn" onclick="filterOrdersByStatus('ACTIVE')">Active & In Transit</button>
+          <button class="tab-btn" onclick="filterOrdersByStatus('COMPLETED')">Delivered</button>
+          <button class="tab-btn" onclick="filterOrdersByStatus('CANCELLED')">Cancelled</button>
+        </div>
+        <button class="btn-secondary" onclick="loadOrders()">Refresh Orders</button>
+      </div>
+
+      <div class="orders-feed" id="ordersContainer">
+        <!-- Injected via app.js -->
+      </div>
+    </section>
+
+    <!-- VIEW 7: SELLER HUB -->
+    <section id="view-seller-dashboard" class="page-view">
+      <div class="page-header">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <div>
+            <h2 id="sellerStoreName">Merchant Vendor Hub</h2>
+            <p>Manage your product catalog, monitor inventory allocations, and fulfill customer order lines.</p>
+          </div>
+          <button class="btn-primary" onclick="openSellerProductForm()">+ Add New Product</button>
+        </div>
+      </div>
+
+      <!-- Seller Metrics -->
+      <div class="stats-row">
+        <div class="stat-card">
+          <span class="stat-label">Listed Products</span>
+          <span class="stat-val" id="sellerStatProducts">0</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-label">Total Sold Items</span>
+          <span class="stat-val" id="sellerStatItems">0</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-label">Total Revenue</span>
+          <span class="stat-val" id="sellerStatRevenue">₹0.00</span>
+        </div>
+      </div>
+
+      <!-- Seller Subtabs -->
+      <div class="seller-tabs">
+        <button class="seller-tab active" id="tabSellerProducts" onclick="switchSellerTab('products')">My Products</button>
+        <button class="seller-tab" id="tabSellerOrders" onclick="switchSellerTab('orders')">Order Line Items</button>
+      </div>
+
+      <!-- Seller Products Tab -->
+      <div id="sellerProductsPanel">
+        <!-- New / Edit Product Form (collapsible) -->
+        <div class="seller-form-card" id="sellerProductFormCard" style="display:none;">
+          <h3 id="sellerFormTitle">Create New Catalog Product</h3>
+          <form id="sellerProductForm" onsubmit="handleSellerProductSubmit(event)">
+            <input type="hidden" id="sellerProductId">
+            <div class="form-row">
+              <div class="form-group">
+                <label>SKU Code</label>
+                <input type="text" id="sellerSku" placeholder="e.g. KB-MODULAR-01" required>
+              </div>
+              <div class="form-group">
+                <label>Product Name</label>
+                <input type="text" id="sellerName" placeholder="e.g. Apex Mechanical Keyboard" required>
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Base Price (₹)</label>
+                <input type="number" step="0.01" id="sellerPrice" required>
+              </div>
+              <div class="form-group">
+                <label>Category</label>
+                <select id="sellerCategory" required>
+                  <option value="Cosmetics">Cosmetics</option>
+                  <option value="Namkeens">Namkeens</option>
+                  <option value="Clothes">Clothes</option>
+                  <option value="Jewellery">Jewellery</option>
+                  <option value="Peripherals">Peripherals</option>
+                  <option value="Audio">Audio</option>
+                  <option value="Displays">Displays</option>
+                  <option value="Furniture">Furniture</option>
+                  <option value="Storage">Storage</option>
+                  <option value="Accessories">Accessories</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Initial Stock</label>
+                <input type="number" id="sellerStock" value="25" min="1" required>
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Description</label>
+              <textarea id="sellerDesc" rows="2" placeholder="Product details and specifications..."></textarea>
+            </div>
+            <div class="form-group">
+              <label>Image URL</label>
+              <input type="url" id="sellerImageUrl" placeholder="https://images.unsplash.com/...">
+            </div>
+            <div style="display:flex;gap:0.75rem;margin-top:0.75rem;">
+              <button type="submit" class="btn-primary">Save Product</button>
+              <button type="button" class="btn-secondary" onclick="closeSellerProductForm()">Cancel</button>
+            </div>
+          </form>
+        </div>
+
+        <!-- Products Table -->
+        <div class="table-card">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Product</th>
+                <th>SKU</th>
+                <th>Category</th>
+                <th>Price</th>
+                <th>Stock</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="sellerProductsTableBody">
+              <!-- Injected via app.js -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Seller Orders Tab -->
+      <div id="sellerOrdersPanel" style="display:none;">
+        <div class="table-card">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Order #</th>
+                <th>Customer</th>
+                <th>Item & SKU</th>
+                <th>Qty</th>
+                <th>Subtotal</th>
+                <th>Fulfillment Status</th>
+              </tr>
+            </thead>
+            <tbody id="sellerOrdersTableBody">
+              <!-- Injected via app.js -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- VIEW 8: AUTHENTICATION -->
+    <section id="view-auth" class="page-view">
+      <div class="auth-card-centered">
+        <div class="auth-tabs">
+          <button class="auth-tab active" id="authTabLogin" onclick="switchAuthMode('login')">Sign In</button>
+          <button class="auth-tab" id="authTabRegCust" onclick="switchAuthMode('register')">Register Customer</button>
+          <button class="auth-tab" id="authTabRegSeller" onclick="switchAuthMode('register-seller')">Merchant Onboarding</button>
+        </div>
+
+        <!-- Login Form -->
+        <form id="loginForm" onsubmit="handleAuthLogin(event)">
+          <div class="form-group">
+            <label>Email Address</label>
+            <input type="email" id="loginEmail" placeholder="merchant@orderflow.io, customer@orderflow.io, admin@orderflow.io" required>
+          </div>
+          <div class="form-group">
+            <label>Password</label>
+            <input type="password" id="loginPassword" required>
+          </div>
+          <button type="submit" class="btn-primary-large" id="btnLoginSubmit">Sign In</button>
+
+          <div class="demo-logins-box">
+            <span class="demo-label">Quick Sign In (One-Click Demo):</span>
+            <div class="demo-btn-group">
+              <button type="button" class="btn-demo-badge merchant-badge" onclick="quickFillLogin('merchant@orderflow.io', 'MerchantPassword123!')">
+                <span>Merchant</span>
+              </button>
+              <button type="button" class="btn-demo-badge customer-badge" onclick="quickFillLogin('customer@orderflow.io', 'CustomerPassword123!')">
+                <span>Customer</span>
+              </button>
+              <button type="button" class="btn-demo-badge admin-badge" onclick="quickFillLogin('admin@orderflow.io', 'AdminPassword123!')">
+                <span>Admin</span>
+              </button>
+            </div>
+          </div>
+
+          <p class="auth-hint">
+            <strong>Default Merchant:</strong> <code>merchant@orderflow.io</code> / <code>MerchantPassword123!</code><br>
+            <strong>Default Customer:</strong> <code>customer@orderflow.io</code> / <code>CustomerPassword123!</code><br>
+            <strong>Default Admin:</strong> <code>admin@orderflow.io</code> / <code>AdminPassword123!</code>
+          </p>
+        </form>
+
+        <!-- Register Customer Form -->
+        <form id="regCustForm" onsubmit="handleAuthRegister(event, 'CUSTOMER')" style="display:none;">
+          <div class="form-group">
+            <label>Full Name</label>
+            <input type="text" id="regCustName" required>
+          </div>
+          <div class="form-group">
+            <label>Email Address</label>
+            <input type="email" id="regCustEmail" required>
+          </div>
+          <div class="form-group">
+            <label>Password</label>
+            <input type="password" id="regCustPassword" minlength="6" required>
+          </div>
+          <button type="submit" class="btn-primary-large">Create Customer Account</button>
+        </form>
+
+        <!-- Register Seller Form -->
+        <form id="regSellerForm" onsubmit="handleAuthRegister(event, 'SELLER')" style="display:none;">
+          <div class="form-group">
+            <label>Merchant / Business Name</label>
+            <input type="text" id="regSellerBusinessName" placeholder="Apex Precision Hardware" required>
+          </div>
+          <div class="form-group">
+            <label>Owner Full Name</label>
+            <input type="text" id="regSellerName" required>
+          </div>
+          <div class="form-group">
+            <label>Business Email</label>
+            <input type="email" id="regSellerEmail" required>
+          </div>
+          <div class="form-group">
+            <label>Password</label>
+            <input type="password" id="regSellerPassword" minlength="6" required>
+          </div>
+          <button type="submit" class="btn-accent-large">Register as Merchant Vendor</button>
+        </form>
+      </div>
+    </section>
+
+    <!-- VIEW 9: TELEMETRY (ADMIN ONLY) -->
+    <section id="view-telemetry" class="page-view">
+      <div class="page-header">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <div>
+            <h2>Kafka Live Telemetry Stream</h2>
+            <p>Protected administrative audit log capturing real-time saga events.</p>
+          </div>
+          <span class="badge" style="background:#06b6d4;color:#000;">ROLE_ADMIN SECURED</span>
+        </div>
+      </div>
+
+      <div class="telemetry-card">
+        <div class="telemetry-feed" id="eventFeed">
+          <div class="empty-feed">Listening for Kafka saga events...</div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <script src="/app.js"></script>
+</body>
+</html>

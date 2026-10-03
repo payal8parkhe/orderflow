@@ -1,0 +1,69 @@
+spring:
+  application:
+    name: api-gateway
+
+  kafka:
+    bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    consumer:
+      group-id: api-gateway-telemetry-group
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: "com.orderflow.*,java.util,java.lang"
+
+server:
+  port: 8080
+
+services:
+  order-service:
+    url: ${ORDER_SERVICE_URL:http://localhost:8081}
+  payment-service:
+    url: ${PAYMENT_SERVICE_URL:http://localhost:8082}
+  delivery-service:
+    url: ${DELIVERY_SERVICE_URL:http://localhost:8083}
+  notification-service:
+    url: ${NOTIFICATION_SERVICE_URL:http://localhost:8084}
+  catalog-service:
+    url: ${CATALOG_SERVICE_URL:http://localhost:8085}
+
+resilience4j:
+  circuitbreaker:
+    configs:
+      default:
+        sliding-window-size: 10
+        minimum-number-of-calls: 5
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 10000ms
+        permitted-number-of-calls-in-half-open-state: 3
+    instances:
+      order-service:
+        base-config: default
+      payment-service:
+        base-config: default
+      delivery-service:
+        base-config: default
+      notification-service:
+        base-config: default
+      catalog-service:
+        base-config: default
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  health:
+    circuitbreakers:
+      enabled: true
+  endpoint:
+    health:
+      show-details: always
+      probes:
+        enabled: true
+
+logging:
+  level:
+    com.orderflow: INFO
+    org.springframework.web: INFO
+    org.springframework.kafka: INFO
